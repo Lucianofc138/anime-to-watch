@@ -1,34 +1,54 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useApolloClient } from '@apollo/client';
+import { GET_ANIME_LIST } from './schemas/queries'
+import { useState } from 'react';
+import { AnimeCard } from './components/AnimeCard';
+import { Anime } from './types';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const client = useApolloClient();
+
+  const [animeList, setAnimeList] = useState([]);
+  const [search, setSearch] = useState('');
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(event.target.value);
+  };
+
+  const handleSearch = () => {
+    setAnimeList([]);
+    client.query({
+      query: GET_ANIME_LIST,
+      variables: {
+        search: search,
+        page: 1,
+        perPage: 100
+      }
+    }).then((response) => {
+      setAnimeList(response.data.Page.media);
+    }).catch(error => {
+      console.error('Error fetching data:', error);
+    });
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <main className="flex flex-col justify-center items-center m-5 gap-5">
+      <h1>Anime to Watch</h1>
+      <div className="mb-5">
+        <input
+          placeholder='Introduce your anime'
+          value={search}
+          onChange={handleInputChange}
+        />
+        <button onClick={handleSearch} style={{ marginLeft: '50px' }}>Search</button>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+      <ul className="flex justify-evenly flex-wrap gap-5">
+        {animeList.map((anime: Anime) => (
+          <li key={anime.id} style={{border: "3px solid white", borderRadius: "10px"}}>
+            <AnimeCard anime={anime}/>
+          </li>
+        ))}
+      </ul>
+    </main>
   )
 }
 

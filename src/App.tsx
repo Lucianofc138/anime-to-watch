@@ -1,111 +1,122 @@
 import { ApolloClient, useApolloClient } from '@apollo/client';
-import { GET_ANIME_LIST } from './schemas/queries'
-import { useEffect, useState, useRef } from 'react';
+import { GET_ANIME_BY_IDS, GET_ANIME_RECOMMENDATIONS_BY_ANIME_IDS } from './schemas/queries'
+import { useState } from 'react';
 import { AnimeCard } from './components/AnimeCard';
 import { MiniAnimeCard } from './components/MiniAnimeCard';
 import { AnimeChip } from './components/AnimeChip';
-import { Anime, AnimeSelector } from './types';
-import { DEBOUNCE_MS } from './constants';
-
-function useAnimeSelector({ client } : { client: ApolloClient<object>}): AnimeSelector {
-  const [searchString, setSearchString] = useState<string>("Tensura");
-  const [searchedAnime, setSearchedAnime] = useState<Anime[]>([] as Anime[]);
-  const [selectedAnime, setSelectedAnime] = useState<Anime[]>([] as Anime[]);
-  const [loading, setLoading] = useState<boolean>(false);
-
-  const searchDebounceTimeout = useRef<any>(null);
-
-  useEffect(() => {
-    setSearchString("Tensura");
-    setTimeout(() => {
-      handleSearch();
-    }, 200);
-  }, []);
-
-  const handleSearch = () => {
-    setLoading(true);
-    const data = {
-      query: GET_ANIME_LIST,
-      variables: {
-        search: searchString,
-        page: 1,
-        perPage: 100
-      }
-    };
-
-    client.query(data)
-      .then((response) => {
-        setSearchedAnime((response.data.Page.media) as Anime[]);
-      }).catch(error => {
-        // TODO: manage error <-------------------------------------------------------------------
-        console.error('Error fetching data:', error);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
-
-  useEffect(() => {
-    clearTimeout(searchDebounceTimeout.current);
-    searchDebounceTimeout.current = setTimeout(
-      handleSearch,
-      DEBOUNCE_MS
-    );
-  }, [searchString]);
-
-  const addToSelectedAnime = (anime: Anime) => {
-    if (selectedAnime.find((item: Anime) => item.id === anime.id)) {
-      return;
-    }
-    setSelectedAnime((prevState: Anime[]) => [...prevState, anime]);
-  };
-
-  const removeFromSelectedAnime = (anime: Anime) => {
-    setSelectedAnime((prevState: Anime[]) => prevState.filter((item: Anime) => item.id !== anime.id));
-  };
-
-  useEffect(() => {
-    console.log('selectedAnime', selectedAnime);
-  }, [selectedAnime]);
-
-  return {
-    searchString,
-    setSearchString,
-    searchedAnime, 
-    setSearchedAnime,
-    selectedAnime,
-    addToSelectedAnime,
-    removeFromSelectedAnime,
-    handleSearch,
-    loading,
-  }
-}
+import { Anime } from './types';
+import { useAnimeSelector } from './hooks/useAnimeSelector'
 
 interface AnimeRecommendator {
   recommendations: Anime[],
-  hasReccomendations: boolean,
-  recommendByAnimeIdList: (animeIdList: string[]) => void,
+  recommendationsSorted: Anime[],
+  hasRecommendations: boolean,
+  recommendByAnimeIdList: (animeIdList: string[]) => Promise<void>,
   loading: boolean,
 }
 
+async function getAnimeRecommendations({ 
+  client, 
+  animeIdList 
+} : { 
+  client: ApolloClient<object>, 
+  animeIdList: string[] 
+}) : Promise<string[]> {
+    const getAnimeRecommendationData = {
+      query: GET_ANIME_RECOMMENDATIONS_BY_ANIME_IDS,
+      variables: {
+        ids: animeIdList,
+      }
+    };
+
+    const response = await client.query(getAnimeRecommendationData)
+    return response.data.Page.media;
+}
+
+async function getAnimeInfoByIds({ 
+  client, 
+  animeIdList 
+} : { 
+  client: ApolloClient<object>, 
+  animeIdList: string[] 
+}) : Promise<Anime[]> {
+  const getAnimeRecommendationInfoData = {
+    query: GET_ANIME_BY_IDS,
+    variables: {
+      ids: animeIdList,
+    }
+  };
+  
+
+  const response = await client.query(getAnimeRecommendationInfoData);
+  return response.data.Page.media;
+}
+
+type recommendationResult = "OK" | "ERROR" | null;
+
 function useAnimeRecommendator({ client } : { client: ApolloClient<object>}): AnimeRecommendator {
   const [recommendations, setRecommendations] = useState<Anime[]>([] as Anime[]);
+  const [recommendationResult, setRecommendationResult] = useState<recommendationResult>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const recommendByAnimeIdList = (animeIdList: string[]) => {
+  const recommendByAnimeIdList = async (animeIdList: string[]) => {
     setLoading(true);
-    // Magia Francisco ...
+    try {
+      const recommendedMedia = await getAnimeRecommendations({ client, animeIdList });
+      console.log('recommendedMedia: ', recommendedMedia);
+      
+      const getRecommendationIds = mediaElement => mediaElement.recommendations.edges
+        .map(e => e.node.mediaRecommendation.id);
 
-    setTimeout(() => {
-      setRecommendations([{}]);
-    setLoading(false);
-    }, 1500);
+      const recommendationIds = recommendedMedia
+        .map(getRecommendationIds)
+        .reduce((prev: Array<string>, curr: string) => {
+          return [...prev, ...curr];
+      }, [])
 
+      console.log("Recommendation Ids: ", recommendationIds)
+    
+      const recommendedAnime = await getAnimeInfoByIds({ client, animeIdList: recommendationIds });
+      console.log("ANIME INFO RESPONSE: ", recommendedAnime);
+      setRecommendations(recommendedAnime as Anime[]);
+      setRecommendationResult("OK");
+    } catch (e) {
+      console.error(e);
+      setRecommendationResult("ERROR");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRecommendationsSorted = () => {
+    const maxPopularity = recommendations.reduce((prev: number, curr: Anime) => {
+      return Math.max(prev, curr?.popularity);
+    }, 0);
+
+    const getF1Score = (anime: Anime) : number => {
+      const weightedPopularity = Math.sqrt(anime.popularity / maxPopularity);
+      const weightedScore = anime.averageScore / 100;
+      const scoreWeight = 1; 
+    
+      const adjustedPopularity = weightedPopularity / scoreWeight;
+      return (2 * (adjustedPopularity * weightedScore) / (adjustedPopularity + weightedScore));
+    };
+    
+    const compareAnime = (a: Anime, b: Anime) : number => {
+      const f1ScoreA = a?.weightedScore ?? getF1Score(a) * 100;
+      const f1ScoreB = b?.weightedScore ?? getF1Score(b) * 100;
+      return f1ScoreB - f1ScoreA;
+    }
+  
+    return recommendations
+      .map((a) => ({...a, weightedScore: 100 * getF1Score(a)}))
+      .sort(compareAnime);
   };
 
   return {
     recommendations,
-    hasReccomendations: recommendations.length > 0,
+    recommendationsSorted: getRecommendationsSorted(),
+    hasRecommendations: recommendationResult === "OK",
     recommendByAnimeIdList,
     loading,
   }
@@ -160,52 +171,58 @@ function App() {
   };
 
   const deployRecommendations = () => {
-    return <p>Recommendations</p>
+    return (
+      <>
+        <button onClick={() => window.location.reload()}>Restart</button>
+        <ul className="flex justify-evenly flex-wrap gap-5">
+          {animeRecommendator.recommendationsSorted.map((anime: Anime) => (
+            <li key={anime.id}>
+              <AnimeCard anime={anime}/>
+            </li>
+          ))}
+        </ul>
+      </>
+    );
   };
 
   return (
     <main className="flex flex-col justify-center items-center m-5 p-5 gap-5 ">
       <h1>Anime to Watch</h1>
-      <div className="w-full md:w-2/3 lg:w-1/2 m-5">
-        <input
-          className="p-2 w-full"
-          placeholder='Introduce your anime'
-          value={animeSelector.searchString}
-          onChange={handleInputChange}
-        />
-      </div>
-      <button 
-        onClick={() => 
-          animeRecommendator.recommendByAnimeIdList(animeSelector.selectedAnime.map((anime: Anime) => anime.id))
-        }
-      >
-          Get Recommendations
-      </button>
-      { animeRecommendator.hasReccomendations &&
+      { !animeRecommendator.hasRecommendations && !animeRecommendator.loading && (
+        <>
+          <div className="w-full md:w-2/3 lg:w-1/2 m-5">
+            <input
+              className="p-2 w-full"
+              placeholder='Introduce your anime'
+              value={animeSelector.searchString}
+              onChange={handleInputChange}
+            />
+
+        </div>
+        <button 
+          onClick={() => 
+            animeRecommendator.recommendByAnimeIdList(animeSelector.selectedAnime.map((anime: Anime) => anime.id))
+          }
+        >
+            Get Recommendations
+        </button>
+        </>
+      )}
+
+      { animeRecommendator.hasRecommendations && !animeRecommendator.loading &&
         deployRecommendations()
       }
       
-      { !animeRecommendator.hasReccomendations && animeRecommendator.loading && 
+      { !animeRecommendator.hasRecommendations && animeRecommendator.loading && 
         <p>Loading...</p>
       }
 
-      {!animeRecommendator.hasReccomendations && !animeRecommendator.loading &&
+      {!animeRecommendator.hasRecommendations && !animeRecommendator.loading &&
         <>
           {deploySelectedList()}
           {deploySearchList()}
         </>
       }
-
-
-      {/* HERE GOES THE SEARCH RESULTS ----------------------------------------------
-      <ul className="flex justify-evenly flex-wrap gap-5">
-        {animeSelector.searchedAnime.map((anime: Anime) => (
-          <li key={anime.id} style={{border: "3px solid white", borderRadius: "10px"}}>
-            <AnimeCard anime={anime}/>
-          </li>
-        ))}
-      </ul>
-      */}
     </main>
   )
 }

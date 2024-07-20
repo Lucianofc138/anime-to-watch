@@ -30,6 +30,12 @@ export function AnimeCard({ anime }: { anime: Anime }) {
                 <p className="text-sm text-white-700">
                     Season Year: {anime.seasonYear || 'Unknown'}
                 </p>
+                <p className="text-sm text-white-700">
+                    Views: {anime.popularity || 'Unknown'}
+                </p>
+                {anime.weightedScore && <p className="text-sm text-white-700">
+                    Weighted Score: {anime.weightedScore.toFixed(0)}
+                </p>}
             </div>
         </div>
     );

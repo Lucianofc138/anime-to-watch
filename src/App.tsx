@@ -65,12 +65,12 @@ function useAnimeRecommendator({ client } : { client: ApolloClient<object>}): An
       const recommendedMedia = await getAnimeRecommendations({ client, animeIdList });
       console.log('recommendedMedia: ', recommendedMedia);
       
-      const getRecommendationIds = mediaElement => mediaElement.recommendations.edges
-        .map(e => e.node.mediaRecommendation.id);
+      const getRecommendationIds : (mediaElement: any) => string[] = (mediaElement: any) => mediaElement.recommendations.edges
+        .map((e: any) => e.node.mediaRecommendation.id as string);
 
-      const recommendationIds = recommendedMedia
+      const recommendationIds : string[] = recommendedMedia
         .map(getRecommendationIds)
-        .reduce((prev: Array<string>, curr: string) => {
+        .reduce((prev: string[], curr: string[]) => {
           return [...prev, ...curr];
       }, [])
 

@@ -1,34 +1,25 @@
-name: Deploy Vite React App
+name: Build and Deploy
 
 on:
   push:
     branches:
-      - main  # Change this to your default branch if it's not 'main'
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v3 # Updated to the latest version
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v3 # Updated to the latest version
         with:
-          node-version: '16'  # Make sure this matches the version you're using
-
-      - name: Install pnpm
-        run: npm install -g pnpm
+          node-version: '20' # Updated to use Node.js 20
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
 
-      - name: Build project
-        run: pnpm build
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist  # Make sure this matches your build output directory
+      - name: Build the project
+        run: npm run build

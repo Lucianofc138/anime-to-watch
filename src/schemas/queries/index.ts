@@ -12,6 +12,7 @@ export const GET_ANIME_LIST = gql`
                 coverImage {
                     large
                 }
+                synonyms
                 averageScore
                 status
                 episodes
@@ -20,4 +21,32 @@ export const GET_ANIME_LIST = gql`
             }
         }
     }
+`;
+
+
+export const GET_ANIME_RECOMMENDATIONS_BY_ANIME_IDS = gql`
+  query GetRecommendations($ids: [Int]) {
+    Page {
+      media(id_in: $ids, type: ANIME) {
+        id
+        title {
+          romaji
+          english
+        }
+        recommendations {
+          edges {
+            node {
+              mediaRecommendation {
+                id
+                title {
+                  userPreferred
+                }
+              }
+              userRating
+            }
+          }
+        }
+      }
+    }
+  }
 `;

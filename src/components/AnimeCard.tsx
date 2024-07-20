@@ -1,20 +1,5 @@
 import { Anime } from '../types'
 
-// export function AnimeCard({
-//     anime
-// }: {
-//     anime: Anime
-// }) {
-//     return (
-//         <>
-//             <div>
-//             {anime.title.english || anime.title.romaji}
-//             {/* <image src={anime.coverImage.large} alt={anime.title.english || anime.title.romaji} style={{ width: '100px', height: '150px' }} /> */}
-//             </div>
-//         </>
-//     );
-// }
-
 export function AnimeCard({ anime }: { anime: Anime }) {
     return (
         <div className="h-60 m-2 gap-2 flex flex-row">

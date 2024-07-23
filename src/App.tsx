@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ApolloClient, useApolloClient } from '@apollo/client';
 import { GET_ANIME_BY_IDS, GET_ANIME_RECOMMENDATIONS_BY_ANIME_IDS } from './schemas/queries'
 import { useState } from 'react';
@@ -6,6 +7,8 @@ import { MiniAnimeCard } from './components/MiniAnimeCard';
 import { AnimeChip } from './components/AnimeChip';
 import { Anime } from './types';
 import { useAnimeSelector } from './hooks/useAnimeSelector'
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from './components/LanguageSelector';
 
 interface AnimeRecommendator {
   recommendations: Anime[],
@@ -132,6 +135,8 @@ function App() {
     animeSelector.setSearchString(event.target.value);
   };
 
+  const { t } = useTranslation();
+
   const deploySelectedList = () => {
     return (
       <ul className="flex flex-wrap gap-2">
@@ -173,7 +178,7 @@ function App() {
   const deployRecommendations = () => {
     return (
       <>
-        <button onClick={() => window.location.reload()}>Restart</button>
+        <button onClick={() => window.location.reload()}>{t('restart')}</button>
         <ul className="flex justify-evenly flex-wrap gap-5">
           {animeRecommendator.recommendationsSorted.map((anime: Anime) => (
             <li key={anime.id}>
@@ -187,13 +192,14 @@ function App() {
 
   return (
     <main className="flex flex-col justify-center items-center m-5 p-5 gap-5 ">
+      <LanguageSelector />
       <h1>Anime to Watch</h1>
       { !animeRecommendator.hasRecommendations && !animeRecommendator.loading && (
         <>
           <div className="w-full md:w-2/3 lg:w-1/2 m-5">
             <input
               className="p-2 w-full"
-              placeholder='Introduce your anime'
+              placeholder={t('search_anime')}
               value={animeSelector.searchString}
               onChange={handleInputChange}
             />
@@ -204,7 +210,7 @@ function App() {
             animeRecommendator.recommendByAnimeIdList(animeSelector.selectedAnime.map((anime: Anime) => anime.id))
           }
         >
-            Get Recommendations
+            {t('get_recommendations')}
         </button>
         </>
       )}
@@ -214,7 +220,7 @@ function App() {
       }
       
       { !animeRecommendator.hasRecommendations && animeRecommendator.loading && 
-        <p>Loading...</p>
+        <p>{t('loading')}...</p>
       }
 
       {!animeRecommendator.hasRecommendations && !animeRecommendator.loading &&

@@ -1,6 +1,8 @@
 import { Anime } from '../types'
+import { useTranslation } from 'react-i18next';
 
 export function AnimeCard({ anime }: { anime: Anime }) {
+    const { t } = useTranslation();
     return (
         <div className="h-60 m-2 gap-2 flex flex-row">
             <div className="aspect-[3/4] flex justify-center items-center overflow-hidden rounded" >
@@ -16,25 +18,25 @@ export function AnimeCard({ anime }: { anime: Anime }) {
                     {anime.title.english || anime.title.romaji}
                 </h2>
                 <p className="text-sm text-white-600 mb-2">
-                    Score: {anime.averageScore || 'N/A'}
+                    {t('score')}: {anime.averageScore || 'N/A'}
                 </p>
                 <p className="text-sm text-white-700">
-                    Status: {anime.status || 'Unknown'}
+                    {t('status')}: {anime.status || 'Unknown'}
                 </p>
                 <p className="text-sm text-white-700">
-                    Episodes: {anime.episodes || 'Unknown'}
+                    {t('episodes')}: {anime.episodes || 'Unknown'}
                 </p>
                 <p className="text-sm text-white-700">
-                    Type: {anime.type || 'Unknown'}
+                    {t('type')}: {anime.type || 'Unknown'}
                 </p>
                 <p className="text-sm text-white-700">
-                    Season Year: {anime.seasonYear || 'Unknown'}
+                    {t('season_year')}: {anime.seasonYear || 'Unknown'}
                 </p>
                 <p className="text-sm text-white-700">
-                    Views: {anime.popularity || 'Unknown'}
+                    {t('views')}: {anime.popularity || 'Unknown'}
                 </p>
                 {anime.weightedScore && <p className="text-sm text-white-700">
-                    Weighted Score: {anime.weightedScore.toFixed(0)}
+                    {t('weighted_score')}: {anime.weightedScore.toFixed(0)}
                 </p>}
             </div>
         </div>
